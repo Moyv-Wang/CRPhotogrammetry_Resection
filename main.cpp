@@ -6,6 +6,8 @@
 #include<sstream>
 #include<vector>
 #include<iostream>
+#include<iomanip>
+
 using namespace std;
 using namespace cv;
 
@@ -296,15 +298,16 @@ int main()
 	GeneratePairs(left_imgPoints, ControlPoints, left_PointPairs);
 	GeneratePairs(right_imgPoints, ControlPoints, right_PointPairs);
 
-	////构建系数阵A和常数项l
+	////构建右片系数阵A和常数项l
 	//Mat A(2 * right_PointPairs.size(), 13, CV_64FC1);
 	//Mat l(2 * right_PointPairs.size(), 1, CV_64FC1);
+	//Mat X(13, 1, CV_64FC1);
 	//while (true)
 	//{
 	//	//填充系数阵
 	//	cal_Coefficient(A, l, right_PointPairs, right_orien);
 	//	//最小二乘
-	//	Mat X = (A.t() * A).inv() * A.t() * l;
+	//	X = (A.t() * A).inv() * A.t() * l;
 	//	//更新外方位元素
 	//	right_orien.Xs += X.at<double>(0, 0);
 	//	right_orien.Ys += X.at<double>(1, 0);
@@ -319,37 +322,63 @@ int main()
 	//	right_orien.k2 += X.at<double>(10, 0);
 	//	right_orien.p1 += X.at<double>(11, 0);
 	//	right_orien.p2 += X.at<double>(12, 0);
-	//	cout << X << endl;
-	//	cout << l << endl;
-	//	system("cls");
-	//	if (abs(X.at<double>(3, 0)) < 0.0001 && abs(X.at<double>(4, 0)) < 0.0001 && abs(X.at<double>(5, 0)) < 0.0001)
+	//	//cout << X << endl;
+	//	//cout << l << endl;
+	//	//system("cls");
+	//	if (abs(X.at<double>(3, 0)) < 0.00001 && abs(X.at<double>(4, 0)) < 0.00001 && abs(X.at<double>(5, 0)) < 0.00001)
 	//		break;
 	//}
 	////输出定位参数right_orien
-	//cout << "Xs:" << right_orien.Xs << endl;
-	//cout << "Ys:" << right_orien.Ys << endl;
-	//cout << "Zs:" << right_orien.Zs << endl;
-	//cout << "Phi:" << right_orien.Phi << endl;
-	//cout << "Omega:" << right_orien.Omega << endl;
-	//cout << "Kappa:" << right_orien.Kappa << endl;
-	//cout << "f:" << right_orien.f << endl;
-	//cout << "x0:" << right_orien.x0 << endl;
-	//cout << "y0:" << right_orien.y0 << endl;
-	//cout << "k1:" << right_orien.k1 << endl;
-	//cout << "k2:" << right_orien.k2 << endl;
-	//cout << "p1:" << right_orien.p1 << endl;
-	//cout << "p2:" << right_orien.p2 << endl;
+	//cout << "内外方位元素和畸变系数：" << endl;
+	//cout << "Xs: " << right_orien.Xs << endl;
+	//cout << "Ys: " << right_orien.Ys << endl;
+	//cout << "Zs: " << right_orien.Zs << endl;
+	//cout << "Phi: " << right_orien.Phi << endl;
+	//cout << "Omega: " << right_orien.Omega << endl;
+	//cout << "Kappa: " << right_orien.Kappa << endl;
+	//cout << "f: " << right_orien.f << endl;
+	//cout << "x0: " << right_orien.x0 << endl;
+	//cout << "y0: " << right_orien.y0 << endl;
+	//cout << "k1: " << right_orien.k1 << endl;
+	//cout << "k2: " << right_orien.k2 << endl;
+	//cout << "p1: " << right_orien.p1 << endl;
+	//cout << "p2: " << right_orien.p2 << endl;
 
-	//构建系数阵A和常数项l
+	//cout << "----------------------------------" << endl;
+	//Mat V = A * X - l;
+	//Mat vtv = V.t() * V;
+	//double sigma0 = sqrt(vtv.at<double>(0, 0) / (2 * right_PointPairs.size() - 13));
+	//cout << "单位权中误差: " << sigma0 << "mm" << " or " << sigma0 / PIXSIZE << "pixel" << endl;
+	//cout << "----------------------------------" << endl;
+	////精度统计 --> 各未知数的中误差
+	//Mat Qxx = (A.t() * A).inv();
+	//vector<string> str = { "Xs", "Ys", "Zs", "Phi", "Omega", "Kappa", "f", "x0", "y0", "k1", "k2", "p1", "p2" };
+	//cout << "未知数中误差：" << endl;
+	//for (int i = 0; i < 13; i++)
+	//{
+	//	double sigmaXi = sqrt(Qxx.at<double>(i, i)) * sigma0;
+	//	cout << str[i] << ": " << sigmaXi << endl;
+	//}
+	//cout << "----------------------------------" << endl;
+	////精度统计 --> 单位权中误差
+	//cout << "像点观测值残差/pixel" << endl;
+	//cout << "id" << "    vx  " << "	   vy" << endl;
+	//for (int i = 0; i < right_PointPairs.size(); i++)
+	//{
+	//	cout << right_PointPairs[i].flag << "  " << setiosflags(ios::right) << fixed << setprecision(5) << V.at<double>(2 * i, 0) / PIXSIZE << "	" << setiosflags(ios::right) << fixed << setprecision(5) << V.at<double>(2 * i + 1, 0) / PIXSIZE << endl;
+	//}
+
+	//构建左片系数阵A和常数项l
 	Mat A(2 * left_PointPairs.size(), 13, CV_64FC1);
 	Mat l(2 * left_PointPairs.size(), 1, CV_64FC1);
+	Mat X(13, 1, CV_64FC1);
 	while (true)
 	{
 		//填充系数阵
 		cal_Coefficient(A, l, left_PointPairs, left_orien);
 		//cout << "L = " << l << endl;
 		//最小二乘
-		Mat X = (A.t() * A).inv() * A.t() * l;
+		X = (A.t() * A).inv() * A.t() * l;
 		//更新外方位元素
 		left_orien.Xs += X.at<double>(0, 0);
 		left_orien.Ys += X.at<double>(1, 0);
@@ -371,6 +400,7 @@ int main()
 			break;
 	}
 	//输出定位参数left_orien
+	cout << "内外方位元素和畸变系数：" << endl;
 	cout << "Xs: " << left_orien.Xs << endl;
 	cout << "Ys: " << left_orien.Ys << endl;
 	cout << "Zs: " << left_orien.Zs << endl;
@@ -384,8 +414,28 @@ int main()
 	cout << "k2: " << left_orien.k2 << endl;
 	cout << "p1: " << left_orien.p1 << endl;
 	cout << "p2: " << left_orien.p2 << endl;
-	
-	//精度统计
-
+	cout << "----------------------------------" << endl;
+	Mat V = A * X - l;
+	Mat vtv = V.t() * V;
+	double sigma0 = sqrt(vtv.at<double>(0, 0) / (2 * left_PointPairs.size() - 13));
+	cout << "单位权中误差: " << endl << sigma0 <<"mm" << " or " << sigma0 / PIXSIZE << "pixel" << endl;
+	cout << "----------------------------------" << endl;
+	//精度统计 --> 各未知数的中误差
+	Mat Qxx = (A.t() * A).inv();
+	vector<string> str = { "Xs", "Ys", "Zs", "Phi", "Omega", "Kappa", "f", "x0", "y0", "k1", "k2", "p1", "p2" };
+	cout << "未知数中误差：" << endl;
+	for (int i = 0; i < 13; i++)
+	{
+		double sigmaXi = sqrt(Qxx.at<double>(i, i)) * sigma0;
+		cout << str[i] << ": " << sigmaXi << endl;
+	}
+	cout << "----------------------------------" << endl;
+	//精度统计 --> 单位权中误差
+	cout << "像点观测值残差/pixel" << endl;
+	cout << "id" << "    vx  " << "	   vy" << endl;
+	for (int i = 0; i < left_PointPairs.size(); i++)
+	{
+		cout << left_PointPairs[i].flag << "  " << setiosflags(ios::right) << fixed << setprecision(5) << V.at<double>(2 * i, 0) / PIXSIZE << "	" << setiosflags(ios::right) << fixed << setprecision(5) << V.at<double>(2 * i + 1, 0) / PIXSIZE << endl;
+	}
 	return 0;
 }
